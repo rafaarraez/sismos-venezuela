@@ -4,7 +4,7 @@
  *
  * Uso:  BLOB_READ_WRITE_TOKEN=vercel_blob_rw_... node scripts/seed-blob.mjs
  */
-import { head, put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import { readFile } from "node:fs/promises";
 
 const BLOB_KEY = "sismos-store.json";
@@ -22,10 +22,13 @@ const local = JSON.parse(
 
 let remote = { quakes: [] };
 try {
-  const { url } = await head(BLOB_KEY, { token });
-  const res = await fetch(`${url}?ts=${Date.now()}`, { cache: "no-store" });
-  if (res.ok) remote = await res.json();
-  console.log(`Blob existente: ${remote.quakes.length} sismos.`);
+  const result = await get(BLOB_KEY, { access: "private", token });
+  if (result?.stream) {
+    remote = JSON.parse(await new Response(result.stream).text());
+    console.log(`Blob existente: ${remote.quakes.length} sismos.`);
+  } else {
+    console.log("El Blob no existe todavía; se crea desde cero.");
+  }
 } catch {
   console.log("El Blob no existe todavía; se crea desde cero.");
 }
@@ -40,7 +43,7 @@ const { url } = await put(
   BLOB_KEY,
   JSON.stringify({ updated: Date.now(), quakes }),
   {
-    access: "public",
+    access: "private",
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",

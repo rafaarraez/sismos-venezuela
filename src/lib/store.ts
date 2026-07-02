@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { head, put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 import { dedupe, fetchAllQuakes, type FetchResult } from "./sources";
 import { START_DATE } from "./constants";
 import type { Quake, QuakeSource } from "./types";
@@ -47,12 +47,11 @@ async function readDisk(): Promise<string | null> {
 
 async function readBlob(): Promise<string | null> {
   try {
-    const { url } = await head(BLOB_KEY);
-    // Query única para saltar la caché del CDN y leer la versión recién escrita.
-    const res = await fetch(`${url}?ts=${Date.now()}`, { cache: "no-store" });
-    return res.ok ? await res.text() : null;
+    const result = await get(BLOB_KEY, { access: "private" });
+    if (!result?.stream) return null; // No existe todavía.
+    return await new Response(result.stream).text();
   } catch {
-    return null; // No existe todavía.
+    return null;
   }
 }
 
@@ -78,7 +77,7 @@ async function saveStore(quakes: Quake[]): Promise<void> {
 
   if (useBlob()) {
     await put(BLOB_KEY, json, {
-      access: "public",
+      access: "private",
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: "application/json",
