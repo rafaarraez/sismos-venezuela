@@ -17,11 +17,14 @@ interface StoreFile {
 
 /**
  * En Vercel el filesystem es efímero y de solo lectura: si hay un store de
- * Blob conectado (token presente), el histórico vive ahí. En desarrollo
- * local se sigue usando el archivo en data/.
+ * Blob conectado, el histórico vive ahí. Los stores nuevos exponen
+ * BLOB_STORE_ID (autenticación vía OIDC automática de Vercel); los clásicos,
+ * BLOB_READ_WRITE_TOKEN. En desarrollo local se usa el archivo en data/.
  */
 function useBlob(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID
+  );
 }
 
 /**
@@ -121,8 +124,15 @@ export async function getQuakes(): Promise<FetchResult> {
     const stored = await loadStore();
     const merged = mergeStored(stored, live.quakes);
     // Solo persistir si conseguimos algo en vivo (evita borrar el histórico
-    // si todas las fuentes fallan en un momento dado).
-    if (live.quakes.length > 0) await saveStore(merged);
+    // si todas las fuentes fallan en un momento dado). Si la escritura falla
+    // (p. ej. Blob sin configurar en Vercel), igual respondemos con los datos.
+    if (live.quakes.length > 0) {
+      try {
+        await saveStore(merged);
+      } catch (err) {
+        console.error("No se pudo persistir el histórico:", err);
+      }
+    }
 
     // Las fuentes "activas" reflejan conectividad en vivo; si una falla pero
     // ya tenemos su histórico, igual seguimos mostrando esos eventos.
