@@ -1,5 +1,4 @@
 import {
-  Zap,
   Bomb,
   TrendingUp,
   TrendingDown,
@@ -9,9 +8,9 @@ import {
   Clock4,
   CalendarDays,
   MapPinned,
+  Waves,
 } from "lucide-react";
 import type { Stats } from "@/lib/stats";
-import { formatEnergy } from "@/lib/format";
 
 function tnt(tons: number): string {
   if (tons >= 1e6) return `${(tons / 1e6).toFixed(2)} Mt`;
@@ -24,7 +23,8 @@ interface CardDef {
   label: string;
   value: string;
   hint?: string;
-  accent: string;
+  /** Solo estados con semántica (tendencia, severidad) llevan color. */
+  accent?: string;
 }
 
 function Card({ icon, label, value, hint, accent }: CardDef) {
@@ -36,16 +36,20 @@ function Card({ icon, label, value, hint, accent }: CardDef) {
             {label}
           </p>
           <p
-            className="mt-2 text-xl font-bold tabular-nums sm:text-2xl"
-            style={{ color: accent }}
+            className="mt-2 truncate text-xl font-bold tabular-nums sm:text-2xl"
+            style={accent ? { color: accent } : undefined}
           >
             {value}
           </p>
-          {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+          {hint && <p className="mt-1 truncate text-xs text-muted">{hint}</p>}
         </div>
         <div
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-          style={{ background: `${accent}1a`, color: accent }}
+          className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${
+            accent ? "" : "bg-accent-2/10 text-accent-2"
+          }`}
+          style={
+            accent ? { background: `${accent}1a`, color: accent } : undefined
+          }
         >
           {icon}
         </div>
@@ -68,7 +72,7 @@ export function AdvancedStats({ stats }: { stats: Stats }) {
     );
   const trendColor =
     stats.trend24h == null
-      ? "#94a3b8"
+      ? undefined
       : stats.trend24h > 10
       ? "#ef4444"
       : stats.trend24h < -10
@@ -76,23 +80,6 @@ export function AdvancedStats({ stats }: { stats: Stats }) {
       : "#eab308";
 
   const cards: CardDef[] = [
-    {
-      icon: <Zap size={17} />,
-      label: "Energía liberada",
-      value: formatEnergy(stats.energyJoules),
-      hint:
-        stats.energyMagEq != null
-          ? `≈ magnitud ${stats.energyMagEq.toFixed(1)} equivalente`
-          : "—",
-      accent: "#f59e0b",
-    },
-    {
-      icon: <Bomb size={17} />,
-      label: "Equivalente TNT",
-      value: tnt(stats.tntTons),
-      hint: "Energía total en explosivo",
-      accent: "#fb923c",
-    },
     {
       icon: trendIcon,
       label: "Tendencia 24 h",
@@ -108,14 +95,25 @@ export function AdvancedStats({ stats }: { stats: Stats }) {
       label: "Sismos significativos",
       value: stats.significant4.toLocaleString("es-VE"),
       hint: `M ≥ 4 · ${stats.significant5} con M ≥ 5`,
-      accent: "#ef4444",
+      accent: stats.significant4 > 0 ? "#ef4444" : undefined,
+    },
+    {
+      icon: <Bomb size={17} />,
+      label: "Equivalente TNT",
+      value: tnt(stats.tntTons),
+      hint: "Energía total en explosivo",
+    },
+    {
+      icon: <Waves size={17} />,
+      label: "Reportados por personas",
+      value: stats.felt.toLocaleString("es-VE"),
+      hint: '"Lo sentí" (USGS y SGC)',
     },
     {
       icon: <Layers size={17} />,
       label: "Superficiales",
       value: `${pct(stats.shallow)}`,
       hint: `< 70 km · ${stats.intermediate} interm. · ${stats.deep} prof.`,
-      accent: "#34d399",
     },
     {
       icon: <Clock4 size={17} />,
@@ -125,14 +123,12 @@ export function AdvancedStats({ stats }: { stats: Stats }) {
           ? `${String(stats.peakHour).padStart(2, "0")}:00`
           : "—",
       hint: "Mayor actividad del día",
-      accent: "#a78bfa",
     },
     {
       icon: <CalendarDays size={17} />,
       label: "Día más activo",
       value: stats.busiestDay ? `${stats.busiestDay.count}` : "—",
       hint: stats.busiestDay ? stats.busiestDay.label : "—",
-      accent: "#38bdf8",
     },
     {
       icon: <MapPinned size={17} />,
@@ -141,7 +137,6 @@ export function AdvancedStats({ stats }: { stats: Stats }) {
       hint: `Mediana de magnitud: ${
         stats.medianMag != null ? stats.medianMag.toFixed(1) : "N/D"
       }`,
-      accent: "#2dd4bf",
     },
   ];
 

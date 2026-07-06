@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sismos-venezuela.vercel.app"),
   title: "Sismos Venezuela · Monitor en tiempo real",
   description:
     "Dashboard en tiempo real de la actividad sísmica en Venezuela desde el 24 de junio de 2026. Datos de FUNVISIS, USGS, EMSC y SGC.",

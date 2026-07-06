@@ -1,24 +1,32 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Activity, RefreshCw, RadioTower } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  RefreshCw,
+  RadioTower,
+  ChevronDown,
+} from "lucide-react";
 import { useQuakes } from "./useQuakes";
+import { HeroBanner } from "./HeroBanner";
 import { StatsGrid } from "./StatsGrid";
 import { AdvancedStats } from "./AdvancedStats";
 import { FilterBar } from "./FilterBar";
 import { ExportButtons } from "./ExportButtons";
 import {
-  FrequencyChart,
-  IntensityEvolution,
-  MagnitudeDistribution,
-  HourlyChart,
-  CumulativeEnergyChart,
-  DepthDistribution,
+  ActivityChartCard,
+  DistributionChartCard,
   TopRegionsChart,
 } from "./Charts";
 import { QuakeList } from "./QuakeList";
 import { QuakeMap } from "./QuakeMap";
-import { applyFilters, DEFAULT_FILTERS, type Filters } from "@/lib/filters";
+import {
+  applyFilters,
+  DEFAULT_FILTERS,
+  filtersFromQuery,
+  filtersToQuery,
+  type Filters,
+} from "@/lib/filters";
 import { computeStats } from "@/lib/stats";
 import { formatTime } from "@/lib/format";
 import { START_DATE } from "@/lib/constants";
@@ -35,10 +43,13 @@ export function Dashboard({
   initialQuakes,
   initialSources,
   initialGenerated,
+  initialQuery = "",
 }: {
   initialQuakes: Quake[];
   initialSources: QuakeSource[];
   initialGenerated: number;
+  /** Query string de la URL (enlace compartido con filtros). */
+  initialQuery?: string;
 }) {
   const { quakes, sources, generated, loading, error, refresh } = useQuakes({
     quakes: initialQuakes,
@@ -46,12 +57,26 @@ export function Dashboard({
     generated: initialGenerated,
   });
 
-  const [filters, setFilters] = useState<Filters>({ ...DEFAULT_FILTERS });
+  // Los filtros arrancan de la URL (enlace compartido) o del default.
+  const [filters, setFilters] = useState<Filters>(
+    () => filtersFromQuery(initialQuery) ?? { ...DEFAULT_FILTERS }
+  );
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   // Interacción lista ↔ mapa: hover resalta el punto; clic lo selecciona,
   // centra el mapa y abre su detalle.
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Reflejar los filtros activos en la URL sin recargar.
+  useEffect(() => {
+    const qs = filtersToQuery(filters);
+    window.history.replaceState(
+      null,
+      "",
+      qs ? `?${qs}` : window.location.pathname
+    );
+  }, [filters]);
 
   // `generated` actúa como reloj: avanza con cada actualización de datos, de
   // modo que los presets relativos ("últimas 24 h") siguen vivos.
@@ -61,6 +86,24 @@ export function Dashboard({
     [quakes, filters, now]
   );
   const stats = useMemo(() => computeStats(filtered, now), [filtered, now]);
+
+  // El héroe responde "¿qué fue lo último?" sobre el dataset completo,
+  // independiente de los filtros.
+  const latestOverall = useMemo(
+    () =>
+      quakes.reduce<Quake | null>(
+        (best, q) => (best == null || q.time > best.time ? q : best),
+        null
+      ),
+    [quakes]
+  );
+
+  const selectFromHero = (id: string) => {
+    setSelectedId(id);
+    document
+      .getElementById("mapa")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const todayLocal = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Caracas",
@@ -119,6 +162,9 @@ export function Dashboard({
         </div>
       )}
 
+      {/* Último sismo / estado del día */}
+      <HeroBanner latest={latestOverall} now={now} onSelect={selectFromHero} />
+
       {/* KPIs principales */}
       <StatsGrid stats={stats} />
 
@@ -133,32 +179,14 @@ export function Dashboard({
         />
       </div>
 
-      {/* Panel de análisis avanzado */}
-      <div className="mt-4 sm:mt-6">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-fg">Análisis para prevención</h2>
-          <span className="h-px flex-1 bg-border" />
-        </div>
-        <AdvancedStats stats={stats} />
-      </div>
-
-      {/* Gráficos */}
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-6 sm:gap-4 lg:grid-cols-2">
-        <FrequencyChart quakes={filtered} />
-        <IntensityEvolution quakes={filtered} />
-        <CumulativeEnergyChart quakes={filtered} />
-        <MagnitudeDistribution quakes={filtered} />
-        <DepthDistribution quakes={filtered} />
-        <HourlyChart quakes={filtered} />
-        <div className="lg:col-span-2">
-          <TopRegionsChart quakes={filtered} />
-        </div>
-      </div>
-
-      {/* Mapa + Lista */}
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 lg:mt-6 lg:grid-cols-2">
+      {/* Mapa + Lista: lo más consultado, arriba */}
+      <div
+        id="mapa"
+        className="mt-4 grid scroll-mt-4 grid-cols-1 gap-3 sm:gap-4 lg:mt-6 lg:grid-cols-2"
+      >
         <QuakeMap
           quakes={filtered}
+          allQuakes={quakes}
           highlightId={hoverId ?? selectedId}
           selectedId={selectedId}
         />
@@ -171,6 +199,38 @@ export function Dashboard({
             setSelectedId((prev) => (prev === id ? null : id))
           }
         />
+      </div>
+
+      {/* Panel de análisis (plegable) */}
+      <div className="mt-4 sm:mt-6">
+        <button
+          onClick={() => setShowAnalysis((s) => !s)}
+          className="mb-3 flex w-full items-center gap-2 text-left"
+        >
+          <h2 className="text-sm font-semibold text-fg">
+            Análisis del período
+          </h2>
+          <span className="h-px flex-1 bg-border" />
+          <span className="flex items-center gap-1 text-xs text-muted">
+            {showAnalysis ? "Ocultar" : "Ver más"}
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${
+                showAnalysis ? "rotate-180" : ""
+              }`}
+            />
+          </span>
+        </button>
+        {showAnalysis && <AdvancedStats stats={stats} />}
+      </div>
+
+      {/* Gráficos */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:mt-6 sm:gap-4 lg:grid-cols-2">
+        <ActivityChartCard quakes={filtered} />
+        <DistributionChartCard quakes={filtered} />
+        <div className="lg:col-span-2">
+          <TopRegionsChart quakes={filtered} />
+        </div>
       </div>
 
       <footer className="mt-8 border-t border-border pt-4 text-center text-xs text-muted">

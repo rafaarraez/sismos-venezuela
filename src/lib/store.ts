@@ -21,7 +21,7 @@ interface StoreFile {
  * BLOB_STORE_ID (autenticación vía OIDC automática de Vercel); los clásicos,
  * BLOB_READ_WRITE_TOKEN. En desarrollo local se usa el archivo en data/.
  */
-function useBlob(): boolean {
+function blobEnabled(): boolean {
   return Boolean(
     process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID
   );
@@ -60,10 +60,9 @@ async function readBlob(): Promise<string | null> {
 
 async function loadStore(): Promise<Quake[]> {
   try {
-    // Si el Blob está vacío y el snapshot de data/ viajó con el deploy, se
-    // usa como semilla. Ojo: data/ está en .gitignore, así que normalmente
-    // la semilla se sube una vez con `npm run seed-blob`.
-    const raw = useBlob()
+    // Si el Blob está vacío, el snapshot de data/ (trackeado en git, viaja
+    // con el deploy) sirve de semilla: conserva el histórico previo.
+    const raw = blobEnabled()
       ? (await readBlob()) ?? (await readDisk())
       : await readDisk();
     if (!raw) return [];
@@ -78,7 +77,7 @@ async function saveStore(quakes: Quake[]): Promise<void> {
   const body: StoreFile = { updated: Date.now(), quakes };
   const json = JSON.stringify(body);
 
-  if (useBlob()) {
+  if (blobEnabled()) {
     await put(BLOB_KEY, json, {
       access: "private",
       addRandomSuffix: false,

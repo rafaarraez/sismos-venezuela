@@ -1,21 +1,14 @@
-import {
-  Activity,
-  Gauge,
-  TrendingUp,
-  Waves,
-  CalendarClock,
-  ArrowDownToLine,
-  Sigma,
-  Clock,
-} from "lucide-react";
+import { Activity, TrendingUp, Clock, Zap } from "lucide-react";
 import type { Stats } from "@/lib/stats";
 import { magnitudeColor } from "@/lib/constants";
+import { formatEnergy, timeAgoFromDiff } from "@/lib/format";
 
 interface CardDef {
   icon: React.ReactNode;
   label: string;
   value: string;
   hint?: string;
+  /** Solo los valores que SON una magnitud llevan color; el resto, neutro. */
   accent?: string;
 }
 
@@ -28,20 +21,14 @@ function Card({ icon, label, value, hint, accent }: CardDef) {
             {label}
           </p>
           <p
-            className="mt-2 text-2xl font-bold tabular-nums sm:text-3xl"
+            className="mt-2 truncate text-2xl font-bold tabular-nums sm:text-3xl"
             style={accent ? { color: accent } : undefined}
           >
             {value}
           </p>
-          {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+          {hint && <p className="mt-1 truncate text-xs text-muted">{hint}</p>}
         </div>
-        <div
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-          style={{
-            background: `${accent ?? "#38bdf8"}1a`,
-            color: accent ?? "#38bdf8",
-          }}
-        >
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-2/10 text-accent-2">
           {icon}
         </div>
       </div>
@@ -50,20 +37,17 @@ function Card({ icon, label, value, hint, accent }: CardDef) {
 }
 
 export function StatsGrid({ stats }: { stats: Stats }) {
+  const trend =
+    stats.trend24h != null
+      ? ` · ${stats.trend24h >= 0 ? "+" : ""}${stats.trend24h.toFixed(0)}% vs día previo`
+      : "";
+
   const cards: CardDef[] = [
     {
       icon: <Activity size={18} />,
       label: "Sismos registrados",
       value: stats.total.toLocaleString("es-VE"),
-      hint: `${stats.last24h} en las últimas 24 h`,
-      accent: "#38bdf8",
-    },
-    {
-      icon: <Gauge size={18} />,
-      label: "Magnitud promedio",
-      value: stats.avgMag != null ? stats.avgMag.toFixed(2) : "N/D",
-      hint: "Escala de Richter",
-      accent: stats.avgMag != null ? magnitudeColor(stats.avgMag) : undefined,
+      hint: `${stats.last24h} en las últimas 24 h${trend}`,
     },
     {
       icon: <TrendingUp size={18} />,
@@ -73,42 +57,22 @@ export function StatsGrid({ stats }: { stats: Stats }) {
       accent: stats.maxMag != null ? magnitudeColor(stats.maxMag) : undefined,
     },
     {
-      icon: <Sigma size={18} />,
-      label: "Variación de intensidad",
-      value: stats.stdMag != null ? `±${stats.stdMag.toFixed(2)}` : "N/D",
-      hint: "Desviación estándar",
-      accent: "#a78bfa",
-    },
-    {
-      icon: <CalendarClock size={18} />,
-      label: "Frecuencia diaria",
-      value: stats.perDay.toFixed(1),
-      hint: "Sismos por día (promedio)",
-      accent: "#f59e0b",
-    },
-    {
-      icon: <ArrowDownToLine size={18} />,
-      label: "Profundidad promedio",
-      value: stats.avgDepth != null ? `${stats.avgDepth.toFixed(0)} km` : "N/D",
-      hint: "Bajo la superficie",
-      accent: "#34d399",
-    },
-    {
-      icon: <Waves size={18} />,
-      label: "Rango de magnitud",
-      value:
-        stats.minMag != null && stats.maxMag != null
-          ? `${stats.minMag.toFixed(1)}–${stats.maxMag.toFixed(1)}`
-          : "N/D",
-      hint: "Mínima a máxima",
-      accent: "#fb7185",
-    },
-    {
       icon: <Clock size={18} />,
-      label: "Reportados por personas",
-      value: stats.felt.toLocaleString("es-VE"),
-      hint: '"Lo sentí" (USGS)',
-      accent: "#22d3ee",
+      label: "Último sismo",
+      value:
+        stats.msSinceLatest != null
+          ? timeAgoFromDiff(stats.msSinceLatest)
+          : "—",
+      hint: stats.latest?.place ?? "—",
+    },
+    {
+      icon: <Zap size={18} />,
+      label: "Energía liberada",
+      value: formatEnergy(stats.energyJoules),
+      hint:
+        stats.energyMagEq != null
+          ? `≈ magnitud ${stats.energyMagEq.toFixed(1)} equivalente`
+          : "—",
     },
   ];
 

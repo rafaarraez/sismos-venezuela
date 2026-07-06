@@ -276,13 +276,15 @@ export function magBuckets(quakes: Quake[]): MagBucket[] {
 
 /** Distribución por profundidad (clasificación sismológica). */
 export function depthBuckets(quakes: Quake[]): DepthBucket[] {
+  // Rampa secuencial de un solo matiz: más claro = superficial, más oscuro =
+  // profundo. El color aquí es magnitud (profundidad), no identidad.
   const ranges = [
-    { range: "0–10", min: 0, max: 10, color: "#f87171" },
-    { range: "10–30", min: 10, max: 30, color: "#fb923c" },
-    { range: "30–70", min: 30, max: 70, color: "#fbbf24" },
-    { range: "70–150", min: 70, max: 150, color: "#34d399" },
-    { range: "150–300", min: 150, max: 300, color: "#22d3ee" },
-    { range: "300+", min: 300, max: Infinity, color: "#818cf8" },
+    { range: "0–10", min: 0, max: 10, color: "#e0f2fe" },
+    { range: "10–30", min: 10, max: 30, color: "#7dd3fc" },
+    { range: "30–70", min: 30, max: 70, color: "#38bdf8" },
+    { range: "70–150", min: 70, max: 150, color: "#0ea5e9" },
+    { range: "150–300", min: 150, max: 300, color: "#0284c7" },
+    { range: "300+", min: 300, max: Infinity, color: "#0369a1" },
   ];
   return ranges.map((r) => ({
     range: r.range,

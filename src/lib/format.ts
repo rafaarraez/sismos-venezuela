@@ -29,9 +29,8 @@ export function formatTime(ms: number): string {
   return timeFmt.format(ms);
 }
 
-/** Tiempo relativo en español ("hace 3 h", "hace 12 min"). */
-export function timeAgo(ms: number, now: number = Date.now()): string {
-  const diff = now - ms;
+/** Tiempo relativo en español a partir de una diferencia en ms. */
+export function timeAgoFromDiff(diff: number): string {
   const min = Math.floor(diff / 60_000);
   if (min < 1) return "hace instantes";
   if (min < 60) return `hace ${min} min`;
@@ -39,6 +38,11 @@ export function timeAgo(ms: number, now: number = Date.now()): string {
   if (hours < 24) return `hace ${hours} h`;
   const days = Math.floor(hours / 24);
   return `hace ${days} d`;
+}
+
+/** Tiempo relativo en español ("hace 3 h", "hace 12 min"). */
+export function timeAgo(ms: number, now: number = Date.now()): string {
+  return timeAgoFromDiff(now - ms);
 }
 
 export function formatMag(mag: number | null): string {

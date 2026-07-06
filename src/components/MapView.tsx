@@ -46,10 +46,13 @@ function FlyToSelected({
 
 export default function MapView({
   quakes,
+  allQuakes,
   highlightId,
   selectedId,
 }: {
   quakes: Quake[];
+  /** Dataset completo: lo filtrado fuera se pinta como fantasma de contexto. */
+  allQuakes: Quake[];
   highlightId: string | null;
   selectedId: string | null;
 }) {
@@ -57,6 +60,9 @@ export default function MapView({
   const highlighted = highlightId
     ? quakes.find((q) => q.id === highlightId)
     : undefined;
+
+  const visible = new Set(quakes.map((q) => q.id));
+  const ghosts = allQuakes.filter((q) => !visible.has(q.id));
 
   return (
     <MapContainer
@@ -70,6 +76,24 @@ export default function MapView({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
+
+      {/* Histórico fuera del filtro: contexto tenue, no interactivo. */}
+      {ghosts.map((q) => (
+        <CircleMarker
+          key={`ghost-${q.id}`}
+          center={[q.lat, q.lon]}
+          radius={2.5}
+          interactive={false}
+          pathOptions={{
+            color: "#64748b",
+            fillColor: "#64748b",
+            fillOpacity: 0.2,
+            opacity: 0.25,
+            weight: 1,
+          }}
+        />
+      ))}
+
       {quakes.map((q) => {
         const color = magnitudeColor(q.mag);
         const active = q.id === highlightId;

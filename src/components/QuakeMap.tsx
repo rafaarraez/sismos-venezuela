@@ -16,10 +16,12 @@ const MapView = dynamic(() => import("./MapView"), {
 
 export function QuakeMap({
   quakes,
+  allQuakes,
   highlightId,
   selectedId,
 }: {
   quakes: Quake[];
+  allQuakes: Quake[];
   highlightId: string | null;
   selectedId: string | null;
 }) {
@@ -33,7 +35,7 @@ export function QuakeMap({
               Mapa sísmico
             </h3>
             <p className="text-xs text-muted">
-              Tamaño y color del punto según la magnitud
+              Tamaño y color según magnitud · puntos tenues: fuera del filtro
             </p>
           </div>
         </div>
@@ -52,6 +54,7 @@ export function QuakeMap({
       <div className="h-[420px] w-full overflow-hidden rounded-xl border border-border sm:h-[520px]">
         <MapView
           quakes={quakes}
+          allQuakes={allQuakes}
           highlightId={highlightId}
           selectedId={selectedId}
         />

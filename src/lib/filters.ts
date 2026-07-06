@@ -128,6 +128,58 @@ export function applyFilters(quakes: Quake[], f: Filters, now: number): Quake[] 
   });
 }
 
+const PRESET_IDS: DatePreset[] = [
+  "all", "today", "yesterday", "last24h", "last3d", "last7d", "day", "custom",
+];
+
+/** Serializa a query string solo lo que difiere del default (compartible). */
+export function filtersToQuery(f: Filters): string {
+  const p = new URLSearchParams();
+  if (f.preset !== DEFAULT_FILTERS.preset) p.set("rango", f.preset);
+  if (f.preset === "day" && f.dayValue) p.set("dia", f.dayValue);
+  if (f.preset === "custom") {
+    if (f.customFrom) p.set("desde", f.customFrom);
+    if (f.customTo) p.set("hasta", f.customTo);
+  }
+  if (f.minMag > 0) p.set("mag", String(f.minMag));
+  if (f.hourFrom !== 0) p.set("h1", String(f.hourFrom));
+  if (f.hourTo !== 23) p.set("h2", String(f.hourTo));
+  const off = Object.entries(f.sources)
+    .filter(([, v]) => v === false)
+    .map(([k]) => k);
+  if (off.length) p.set("sin", off.join(","));
+  if (f.search.trim()) p.set("q", f.search.trim());
+  return p.toString();
+}
+
+/** Reconstruye filtros desde una query string; null si no trae ninguna. */
+export function filtersFromQuery(qs: string): Filters | null {
+  const p = new URLSearchParams(qs);
+  if ([...p.keys()].length === 0) return null;
+  const f: Filters = {
+    ...DEFAULT_FILTERS,
+    sources: { ...DEFAULT_FILTERS.sources },
+  };
+  const preset = p.get("rango");
+  if (preset && PRESET_IDS.includes(preset as DatePreset)) {
+    f.preset = preset as DatePreset;
+  }
+  f.dayValue = p.get("dia") ?? "";
+  f.customFrom = p.get("desde") ?? "";
+  f.customTo = p.get("hasta") ?? "";
+  const mag = parseFloat(p.get("mag") ?? "");
+  if (Number.isFinite(mag) && mag > 0) f.minMag = mag;
+  const h1 = parseInt(p.get("h1") ?? "", 10);
+  const h2 = parseInt(p.get("h2") ?? "", 10);
+  if (h1 >= 0 && h1 <= 23) f.hourFrom = h1;
+  if (h2 >= 0 && h2 <= 23) f.hourTo = h2;
+  for (const s of (p.get("sin") ?? "").split(",")) {
+    if (s in f.sources) f.sources[s] = false;
+  }
+  f.search = p.get("q") ?? "";
+  return f;
+}
+
 export function isDefault(f: Filters): boolean {
   return (
     f.preset === "today" &&
