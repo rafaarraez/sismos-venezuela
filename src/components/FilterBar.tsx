@@ -14,8 +14,14 @@ const inputCls =
   "rounded-lg border border-border bg-bg-soft/70 px-3 py-2 text-sm text-fg outline-none transition focus:border-accent-2/60";
 const labelCls = "mb-2 block text-xs font-medium uppercase tracking-wide text-muted";
 
+const startShort = new Intl.DateTimeFormat("es-VE", {
+  day: "numeric",
+  month: "short",
+  timeZone: "America/Caracas",
+}).format(new Date(`${START_DATE}T12:00:00Z`));
+
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
-  { id: "all", label: "Todo" },
+  { id: "all", label: `Todo (desde ${startShort})` },
   { id: "today", label: "Hoy" },
   { id: "yesterday", label: "Ayer" },
   { id: "last24h", label: "Últimas 24 h" },

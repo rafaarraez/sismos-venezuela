@@ -48,6 +48,11 @@ export function Dashboard({
 
   const [filters, setFilters] = useState<Filters>({ ...DEFAULT_FILTERS });
 
+  // Interacción lista ↔ mapa: hover resalta el punto; clic lo selecciona,
+  // centra el mapa y abre su detalle.
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   // `generated` actúa como reloj: avanza con cada actualización de datos, de
   // modo que los presets relativos ("últimas 24 h") siguen vivos.
   const now = generated || Date.now();
@@ -152,8 +157,20 @@ export function Dashboard({
 
       {/* Mapa + Lista */}
       <div className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 lg:mt-6 lg:grid-cols-2">
-        <QuakeMap quakes={filtered} />
-        <QuakeList quakes={filtered} now={now} />
+        <QuakeMap
+          quakes={filtered}
+          highlightId={hoverId ?? selectedId}
+          selectedId={selectedId}
+        />
+        <QuakeList
+          quakes={filtered}
+          now={now}
+          selectedId={selectedId}
+          onHover={setHoverId}
+          onSelect={(id) =>
+            setSelectedId((prev) => (prev === id ? null : id))
+          }
+        />
       </div>
 
       <footer className="mt-8 border-t border-border pt-4 text-center text-xs text-muted">

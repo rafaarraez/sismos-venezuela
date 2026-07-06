@@ -9,7 +9,19 @@ import type { Quake } from "@/lib/types";
 
 type SortKey = "time" | "mag" | "depth";
 
-export function QuakeList({ quakes, now }: { quakes: Quake[]; now: number }) {
+export function QuakeList({
+  quakes,
+  now,
+  selectedId,
+  onHover,
+  onSelect,
+}: {
+  quakes: Quake[];
+  now: number;
+  selectedId: string | null;
+  onHover: (id: string | null) => void;
+  onSelect: (id: string) => void;
+}) {
   const [sort, setSort] = useState<SortKey>("time");
   const [limit, setLimit] = useState(40);
 
@@ -49,7 +61,10 @@ export function QuakeList({ quakes, now }: { quakes: Quake[]; now: number }) {
         </div>
       </header>
 
-      <div className="thin-scroll max-h-[560px] space-y-2 overflow-y-auto pr-1">
+      <div
+        className="thin-scroll max-h-[560px] space-y-2 overflow-y-auto pr-1"
+        onMouseLeave={() => onHover(null)}
+      >
         {shown.length === 0 && (
           <div className="grid h-40 place-items-center text-sm text-muted">
             No hay sismos que coincidan con los filtros.
@@ -57,10 +72,18 @@ export function QuakeList({ quakes, now }: { quakes: Quake[]; now: number }) {
         )}
         {shown.map((q) => {
           const info = magnitudeInfo(q.mag);
+          const selected = q.id === selectedId;
           return (
             <article
               key={q.id}
-              className="glass-hover flex items-center gap-3 rounded-xl border border-border bg-bg-soft/40 p-3"
+              onMouseEnter={() => onHover(q.id)}
+              onClick={() => onSelect(q.id)}
+              title={selected ? "Quitar del mapa" : "Ver en el mapa"}
+              className={`glass-hover flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                selected
+                  ? "border-accent/60 bg-accent/10 ring-1 ring-accent/40"
+                  : "border-border bg-bg-soft/40"
+              }`}
             >
               <MagBadge mag={q.mag} />
               <div className="min-w-0 flex-1">
@@ -101,6 +124,7 @@ export function QuakeList({ quakes, now }: { quakes: Quake[]; now: number }) {
                       href={q.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="text-muted transition hover:text-accent-2"
                       title="Ver detalle en la fuente"
                     >

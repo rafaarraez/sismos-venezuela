@@ -14,7 +14,15 @@ const MapView = dynamic(() => import("./MapView"), {
   ),
 });
 
-export function QuakeMap({ quakes }: { quakes: Quake[] }) {
+export function QuakeMap({
+  quakes,
+  highlightId,
+  selectedId,
+}: {
+  quakes: Quake[];
+  highlightId: string | null;
+  selectedId: string | null;
+}) {
   return (
     <section className="glass fade-up overflow-hidden p-4 sm:p-5">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -42,7 +50,11 @@ export function QuakeMap({ quakes }: { quakes: Quake[] }) {
         </div>
       </header>
       <div className="h-[420px] w-full overflow-hidden rounded-xl border border-border sm:h-[520px]">
-        <MapView quakes={quakes} />
+        <MapView
+          quakes={quakes}
+          highlightId={highlightId}
+          selectedId={selectedId}
+        />
       </div>
     </section>
   );

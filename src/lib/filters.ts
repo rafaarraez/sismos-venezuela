@@ -30,7 +30,7 @@ export interface Filters {
 }
 
 export const DEFAULT_FILTERS: Filters = {
-  preset: "all",
+  preset: "today",
   dayValue: "",
   customFrom: "",
   customTo: "",
@@ -130,7 +130,7 @@ export function applyFilters(quakes: Quake[], f: Filters, now: number): Quake[] 
 
 export function isDefault(f: Filters): boolean {
   return (
-    f.preset === "all" &&
+    f.preset === "today" &&
     f.minMag === 0 &&
     f.hourFrom === 0 &&
     f.hourTo === 23 &&

@@ -1,7 +1,15 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { useEffect, useRef } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  useMap,
+} from "react-leaflet";
+import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import { magnitudeColor, magnitudeInfo } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 import type { Quake } from "@/lib/types";
@@ -12,7 +20,44 @@ function radius(mag: number | null): number {
   return Math.max(4, mag * mag * 0.9);
 }
 
-export default function MapView({ quakes }: { quakes: Quake[] }) {
+type MarkerRefs = Map<string, LeafletCircleMarker>;
+
+/** Vuela al sismo seleccionado en la lista y abre su popup. */
+function FlyToSelected({
+  quake,
+  markers,
+}: {
+  quake: Quake | undefined;
+  markers: React.RefObject<MarkerRefs>;
+}) {
+  const map = useMap();
+  const id = quake?.id;
+  const lat = quake?.lat;
+  const lon = quake?.lon;
+
+  useEffect(() => {
+    if (id == null || lat == null || lon == null) return;
+    map.flyTo([lat, lon], Math.max(map.getZoom(), 8), { duration: 0.8 });
+    markers.current?.get(id)?.openPopup();
+  }, [id, lat, lon, map, markers]);
+
+  return null;
+}
+
+export default function MapView({
+  quakes,
+  highlightId,
+  selectedId,
+}: {
+  quakes: Quake[];
+  highlightId: string | null;
+  selectedId: string | null;
+}) {
+  const markersRef = useRef<MarkerRefs>(new Map());
+  const highlighted = highlightId
+    ? quakes.find((q) => q.id === highlightId)
+    : undefined;
+
   return (
     <MapContainer
       center={[8.0, -66.0]}
@@ -27,16 +72,21 @@ export default function MapView({ quakes }: { quakes: Quake[] }) {
       />
       {quakes.map((q) => {
         const color = magnitudeColor(q.mag);
+        const active = q.id === highlightId;
         return (
           <CircleMarker
             key={q.id}
+            ref={(m) => {
+              if (m) markersRef.current.set(q.id, m);
+              else markersRef.current.delete(q.id);
+            }}
             center={[q.lat, q.lon]}
             radius={radius(q.mag)}
             pathOptions={{
               color,
               fillColor: color,
-              fillOpacity: 0.45,
-              weight: 1.5,
+              fillOpacity: active ? 0.85 : 0.45,
+              weight: active ? 3 : 1.5,
             }}
           >
             <Popup>
@@ -62,6 +112,26 @@ export default function MapView({ quakes }: { quakes: Quake[] }) {
           </CircleMarker>
         );
       })}
+
+      {/* Anillo indicador sobre el sismo resaltado desde la lista. */}
+      {highlighted && (
+        <CircleMarker
+          center={[highlighted.lat, highlighted.lon]}
+          radius={radius(highlighted.mag) + 6}
+          interactive={false}
+          pathOptions={{
+            color: "#ffffff",
+            weight: 2,
+            fill: false,
+            dashArray: "4 4",
+          }}
+        />
+      )}
+
+      <FlyToSelected
+        quake={quakes.find((q) => q.id === selectedId)}
+        markers={markersRef}
+      />
     </MapContainer>
   );
 }
